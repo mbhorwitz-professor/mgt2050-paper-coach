@@ -190,7 +190,29 @@ const [projectLoading, setProjectLoading] = useState(false);
       subscription.unsubscribe();
     };
   }, []);
+async function initializePaperProject(userId) {
+  try {
+    setProjectLoading(true);
 
+    const paperProject = await getOrCreatePaperProject(userId);
+
+    setProject(paperProject);
+    setCurrentStage(paperProject.current_stage || 1);
+
+    const savedMessages = await loadProjectMessages(
+      paperProject.id
+    );
+
+    setMessagesByStage(savedMessages);
+  } catch (error) {
+    console.error(
+      "Unable to initialize paper project:",
+      error
+    );
+  } finally {
+    setProjectLoading(false);
+  }
+}
   async function loadProfile(userId) {
     const { data, error } = await supabase
       .from("profiles")
@@ -204,6 +226,7 @@ const [projectLoading, setProjectLoading] = useState(false);
     }
 
     setProfile(data);
+    await initializePaperProject(userId);
   }
 
   const stage = useMemo(
@@ -221,7 +244,7 @@ const [projectLoading, setProjectLoading] = useState(false);
 async function sendMessage() {
   const trimmed = message.trim();
 
-  if (!trimmed) return;
+  if (!trimmed || !project || !session?.user) return;
 
   const existing =
     messagesByStage[currentStage] ||
@@ -245,23 +268,42 @@ async function sendMessage() {
   setMessage("");
 
   try {
-    const response = await fetch("/.netlify/functions/coach", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        stageNumber: currentStage,
-        message: trimmed,
-        messages: pendingMessages,
-      }),
+    await saveMessage({
+      projectId: project.id,
+      userId: session.user.id,
+      stageNumber: currentStage,
+      sender: "student",
+      text: trimmed,
     });
+
+    await saveCurrentStage({
+      projectId: project.id,
+      userId: session.user.id,
+      stageNumber: currentStage,
+      stageName: stage.name,
+    });
+
+    const response = await fetch(
+      "/.netlify/functions/coach",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          stageNumber: currentStage,
+          message: trimmed,
+          messages: pendingMessages,
+        }),
+      }
+    );
 
     const data = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        data?.error || "The coach could not complete the request."
+        data?.error ||
+          "The coach could not complete the request."
       );
     }
 
@@ -269,6 +311,14 @@ async function sendMessage() {
       sender: "coach",
       text: data.reply,
     };
+
+    await saveMessage({
+      projectId: project.id,
+      userId: session.user.id,
+      stageNumber: currentStage,
+      sender: "coach",
+      text: data.reply,
+    });
 
     setMessagesByStage((previous) => ({
       ...previous,
@@ -294,14 +344,14 @@ async function sendMessage() {
       ],
     }));
   }
-}  
+} 
   function advanceStage() {
     if (currentStage < stages.length) {
       setCurrentStage((value) => value + 1);
     }
   }
 
-  if (authLoading) {
+if (authLoading || projectLoading) {
     return (
       <main className="auth-shell">
         <section className="auth-card">
