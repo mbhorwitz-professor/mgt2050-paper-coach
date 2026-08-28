@@ -211,39 +211,83 @@ function App() {
       text,
     }));
 
-  function sendMessage() {
-    const trimmed = message.trim();
+async function sendMessage() {
+  const trimmed = message.trim();
 
-    if (!trimmed) return;
+  if (!trimmed) return;
 
-    const existing =
-      messagesByStage[currentStage] ||
-      openingMessages[currentStage].map((text) => ({
-        sender: "coach",
-        text,
-      }));
+  const existing =
+    messagesByStage[currentStage] ||
+    openingMessages[currentStage].map((text) => ({
+      sender: "coach",
+      text,
+    }));
 
-    const nextMessages = [
-      ...existing,
-      {
-        sender: "student",
-        text: trimmed,
+  const studentMessage = {
+    sender: "student",
+    text: trimmed,
+  };
+
+  const pendingMessages = [...existing, studentMessage];
+
+  setMessagesByStage((previous) => ({
+    ...previous,
+    [currentStage]: pendingMessages,
+  }));
+
+  setMessage("");
+
+  try {
+    const response = await fetch("/.netlify/functions/coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      {
-        sender: "coach",
-        text:
-          "That gives us something useful to work with. What is the strongest example or evidence behind what you just said?",
-      },
-    ];
+      body: JSON.stringify({
+        stageNumber: currentStage,
+        message: trimmed,
+        messages: pendingMessages,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error || "The coach could not complete the request."
+      );
+    }
+
+    const coachMessage = {
+      sender: "coach",
+      text: data.reply,
+    };
 
     setMessagesByStage((previous) => ({
       ...previous,
-      [currentStage]: nextMessages,
+      [currentStage]: [
+        ...(previous[currentStage] || pendingMessages),
+        coachMessage,
+      ],
     }));
+  } catch (error) {
+    console.error("Coach request failed:", error);
 
-    setMessage("");
+    const errorMessage = {
+      sender: "coach",
+      text:
+        "I’m having trouble reaching the coaching service right now. Please try again in a moment.",
+    };
+
+    setMessagesByStage((previous) => ({
+      ...previous,
+      [currentStage]: [
+        ...(previous[currentStage] || pendingMessages),
+        errorMessage,
+      ],
+    }));
   }
-
+}  
   function advanceStage() {
     if (currentStage < stages.length) {
       setCurrentStage((value) => value + 1);
