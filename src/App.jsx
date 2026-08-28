@@ -411,21 +411,32 @@ async function sendMessage() {
                 </div>
 
                 <div className="chat-header-actions">
-                  <button
-                    className="memory-button"
-                    onClick={() => setShowMemory((value) => !value)}
-                  >
-                    What I remember
-                  </button>
+  <button
+    className="memory-button"
+    onClick={() => setShowMemory((value) => !value)}
+  >
+    What I remember
+  </button>
 
-                  <button
-                    className="continue-button"
-                    onClick={advanceStage}
-                    disabled={currentStage === stages.length}
-                  >
-                    Continue to next step →
-                  </button>
-                </div>
+  <button
+    className="quiet-button"
+    onClick={() => {
+      alert(
+        "Your progress is saved. You can return whenever you're ready."
+      );
+    }}
+  >
+    Pause for now
+  </button>
+
+  <button
+    className="continue-button"
+    onClick={advanceStage}
+    disabled={currentStage === stages.length}
+  >
+    Continue to next step →
+  </button>
+</div>
               </div>
 
               {showMemory && (
