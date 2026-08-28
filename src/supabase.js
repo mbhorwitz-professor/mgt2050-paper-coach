@@ -14,24 +14,3 @@ export const supabase = createClient(
   supabaseUrl,
   supabasePublishableKey
 );
-Commit that file.
-Then create:
-src/Auth.jsx
-Paste:
-import React, { useState } from "react";
-import { supabase } from "./supabase";
-
-function Auth({ onAuthenticated }) {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function sendMagicLink(event) {
-    event.preventDefault();
-
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (!cleanEmail) return;
-
-    setLoading(true);
-    setStatus("");
