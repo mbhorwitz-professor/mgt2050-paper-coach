@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "./supabase";
 
-function Auth({ onAuthenticated }) {
+function Auth() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,25 +16,32 @@ function Auth({ onAuthenticated }) {
     setLoading(true);
     setStatus("");
 
-    const redirectTo =
-      window.location.origin;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: cleanEmail,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
-    });
-
-    if (error) {
-      setStatus(error.message);
-    } else {
+      if (error) {
+        console.error("Supabase sign-in error:", error);
+        setStatus(`Sign-in error: ${error.message}`);
+      } else {
+        setStatus(
+          "Check your email for the secure sign-in link."
+        );
+      }
+    } catch (error) {
+      console.error("Unexpected authentication error:", error);
       setStatus(
-        "Check your email for the secure sign-in link."
+        `Authentication request failed: ${
+          error?.message || "Unknown error"
+        }`
       );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (
@@ -54,9 +61,7 @@ function Auth({ onAuthenticated }) {
         </p>
 
         <form onSubmit={sendMagicLink}>
-          <label htmlFor="email">
-            Email address
-          </label>
+          <label htmlFor="email">Email address</label>
 
           <input
             id="email"
