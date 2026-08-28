@@ -583,7 +583,6 @@ if (authLoading || projectLoading) {
                   <span>Enter to send · Shift + Enter for a new line</span>
                   <span>Student-authored · AI-assisted</span>
                 </div>
-              </div>
             </>
           ) : (
             <div className="instructor-view">
