@@ -503,7 +503,20 @@ button:disabled {
   .chat-header {
     flex-direction: column;
   }
+.pace-cue {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f9fc;
+  border: 1px solid #dfe5ee;
+  color: #59697d;
+  font-size: 12px;
+  line-height: 1.45;
+}
 
+.pace-cue strong {
+  color: #244f7c;
+}
   .composer-meta {
     display: none;
   }
