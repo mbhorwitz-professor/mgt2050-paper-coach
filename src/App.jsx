@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
-
+import {
+  getOrCreatePaperProject,
+  loadProjectMessages,
+  saveMessage,
+  saveCurrentStage,
+  markStageCompleted,
+} from "./persistence";
 const stages = [
   {
     number: 1,
@@ -139,7 +145,8 @@ function App() {
   const [message, setMessage] = useState("");
   const [messagesByStage, setMessagesByStage] = useState({});
   const [showMemory, setShowMemory] = useState(false);
-
+const [project, setProject] = useState(null);
+const [projectLoading, setProjectLoading] = useState(false);
   useEffect(() => {
     let mounted = true;
 
