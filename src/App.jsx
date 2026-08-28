@@ -476,15 +476,32 @@ if (authLoading || projectLoading) {
   </button>
 
   <button
-    className="quiet-button"
-    onClick={() => {
+  className="quiet-button"
+  onClick={async () => {
+    if (!project || !session?.user) return;
+
+    try {
+      await saveCurrentStage({
+        projectId: project.id,
+        userId: session.user.id,
+        stageNumber: currentStage,
+        stageName: stage.name,
+      });
+
       alert(
         "Your progress is saved. You can return whenever you're ready."
       );
-    }}
-  >
-    Pause for now
-  </button>
+    } catch (error) {
+      console.error("Unable to save progress:", error);
+
+      alert(
+        "I couldn't confirm your progress was saved. Please try again before leaving."
+      );
+    }
+  }}
+>
+  Pause for now
+</button>
 
   <button
     className="continue-button"
