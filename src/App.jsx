@@ -469,13 +469,18 @@ async function sendMessage() {
                 ))}
               </div>
 
-              <div className="composer-wrap">
-                <div className="coaching-boundary">
-                  <strong>Your thinking first.</strong>{" "}
-                  Use your own words. The coach may question, challenge,
-                  organize, and help you connect your ideas to management
-                  concepts, but it will not write your paper for you.
-                </div>
+              <div className="coaching-boundary">
+  <strong>Your thinking first.</strong>{" "}
+  Use your own words. The coach may question, challenge,
+  organize, and help you connect your ideas to management
+  concepts, but it will not write your paper for you.
+</div>
+
+<div className="pace-cue">
+  <strong>You’re in control of the pace.</strong>{" "}
+  You can pause at any time and return later, or move to the
+  next step when you feel you’ve done enough thinking for now.
+</div>
 
                 <div className="composer">
                   <textarea
