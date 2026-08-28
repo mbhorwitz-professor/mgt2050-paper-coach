@@ -560,9 +560,9 @@ async function sendMessage() {
             <h3>Student-led support</h3>
 
             <p>
-              The coach asks one question at a time and may probe up to three
-              levels when deeper thinking would improve your work. You decide
-              what to keep and when you are ready to move on.
+              The coach may ask follow-up questions to deepen your thinking.
+  You do not have to finish a stage in one sitting. Pause when
+  you need to, return later, or move forward when you feel ready.
             </p>
           </div>
 
