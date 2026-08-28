@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "./supabase";
+import Auth from "./Auth";
 
 const stages = [
   {
@@ -128,11 +130,74 @@ const openingMessages = {
 };
 
 function App() {
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [view, setView] = useState("student");
   const [currentStage, setCurrentStage] = useState(1);
   const [message, setMessage] = useState("");
   const [messagesByStage, setMessagesByStage] = useState({});
   const [showMemory, setShowMemory] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function initializeAuth() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      setSession(session);
+
+      if (session?.user) {
+        await loadProfile(session.user.id);
+      }
+
+      setAuthLoading(false);
+    }
+
+    initializeAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        setSession(newSession);
+
+        if (newSession?.user) {
+          await loadProfile(newSession.user.id);
+        } else {
+          setProfile(null);
+          setView("student");
+        }
+
+        setAuthLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function loadProfile(userId) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, role")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Unable to load profile:", error);
+      return;
+    }
+
+    setProfile(data);
+  }
 
   const stage = useMemo(
     () => stages.find((item) => item.number === currentStage),
@@ -185,6 +250,20 @@ function App() {
     }
   }
 
+  if (authLoading) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <p>Loading your paper coach…</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return <Auth />;
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -205,20 +284,36 @@ function App() {
             Student
           </button>
 
-          <button
-            className={view === "instructor" ? "selected" : ""}
-            onClick={() => setView("instructor")}
-          >
-            Instructor
-          </button>
+          {profile?.role === "instructor" && (
+            <button
+              className={view === "instructor" ? "selected" : ""}
+              onClick={() => setView("instructor")}
+            >
+              Instructor
+            </button>
+          )}
         </div>
 
         <div className="header-actions">
           <span className="prototype-tag">Production build</span>
           <button className="quiet-button">Presenter guide</button>
           <button className="quiet-button">Assignment</button>
-          <button className="avatar" aria-label="Profile">
-            MH
+
+          <button
+            className="quiet-button"
+            onClick={() => supabase.auth.signOut()}
+          >
+            Sign out
+          </button>
+
+          <button
+            className="avatar"
+            aria-label="Profile"
+            title={profile?.email || ""}
+          >
+            {(profile?.full_name || profile?.email || "U")
+              .slice(0, 2)
+              .toUpperCase()}
           </button>
         </div>
       </header>
@@ -261,9 +356,7 @@ function App() {
               <div className="chat-header">
                 <div>
                   <span className="status-dot" />
-                  <span className="stage-label">
-                    STAGE {currentStage}
-                  </span>
+                  <span className="stage-label">STAGE {currentStage}</span>
 
                   <h2>{stage.title}</h2>
 
@@ -297,7 +390,7 @@ function App() {
                   <p>
                     Your topic, management question, research decisions,
                     source analysis, thesis, outline, and stage progress will
-                    appear here once Supabase persistence is connected.
+                    appear here once persistence is connected.
                   </p>
                 </div>
               )}
@@ -316,9 +409,7 @@ function App() {
                       {item.sender === "coach" ? "C" : "S"}
                     </div>
 
-                    <div className="message-bubble">
-                      {item.text}
-                    </div>
+                    <div className="message-bubble">{item.text}</div>
                   </div>
                 ))}
               </div>
@@ -338,10 +429,7 @@ function App() {
                     placeholder="Tell your coach what you’re thinking…"
                     aria-label="Message your paper coach"
                     onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" &&
-                        !event.shiftKey
-                      ) {
+                      if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
                         sendMessage();
                       }
@@ -358,27 +446,20 @@ function App() {
                 </div>
 
                 <div className="composer-meta">
-                  <span>
-                    Enter to send · Shift + Enter for a new line
-                  </span>
-                  <span>
-                    Student-authored · AI-assisted
-                  </span>
+                  <span>Enter to send · Shift + Enter for a new line</span>
+                  <span>Student-authored · AI-assisted</span>
                 </div>
               </div>
             </>
           ) : (
             <div className="instructor-view">
-              <span className="stage-label">
-                INSTRUCTOR WORKSPACE
-              </span>
+              <span className="stage-label">INSTRUCTOR WORKSPACE</span>
 
               <h2>Class progress dashboard</h2>
 
               <p>
-                This workspace will display authenticated student
-                progress from Supabase after the database connection is
-                added.
+                This workspace will display authenticated student progress
+                from Supabase after persistence is connected.
               </p>
 
               <div className="instructor-placeholder-grid">
@@ -410,34 +491,25 @@ function App() {
           <div className="context-card next-action">
             <span className="card-kicker">NEXT ACTION</span>
             <h3>{stage.nextAction}</h3>
-            <p>
-              Work through the current question before moving forward.
-            </p>
+            <p>Work through the current question before moving forward.</p>
           </div>
 
           <div className="context-card method-card">
-            <span className="card-kicker">
-              COACHING METHOD
-            </span>
+            <span className="card-kicker">COACHING METHOD</span>
 
             <h3>Student-led support</h3>
 
             <p>
-              The coach asks one question at a time and may probe up to
-              three levels when deeper thinking would improve your work.
-              You decide what to keep and when you are ready to move on.
+              The coach asks one question at a time and may probe up to three
+              levels when deeper thinking would improve your work. You decide
+              what to keep and when you are ready to move on.
             </p>
           </div>
 
           <div className="context-card">
             <div className="card-row">
-              <span className="card-kicker">
-                CHECKPOINT
-              </span>
-
-              <span className="status-tag">
-                In progress
-              </span>
+              <span className="card-kicker">CHECKPOINT</span>
+              <span className="status-tag">In progress</span>
             </div>
 
             <h3>{stage.checkpoint}</h3>
@@ -451,15 +523,9 @@ function App() {
           </div>
 
           <div className="context-card due-card">
-            <span className="card-kicker">
-              COURSE
-            </span>
-
+            <span className="card-kicker">COURSE</span>
             <strong>MGT 2050</strong>
-
-            <span>
-              Individual Management Paper
-            </span>
+            <span>Individual Management Paper</span>
           </div>
         </aside>
       </section>
