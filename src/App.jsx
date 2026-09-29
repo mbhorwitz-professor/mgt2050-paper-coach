@@ -345,12 +345,22 @@ async function sendMessage() {
     }));
   }
 } 
-  function advanceStage() {
-    if (currentStage < stages.length) {
-      setCurrentStage((value) => value + 1);
+  async function advanceStage() {
+    const nextStage = Math.min(currentStage + 1, stages.length);
+    setCurrentStage(nextStage);
+    if (project && session?.user) {
+      try {
+        await saveCurrentStage({
+          projectId: project.id,
+          userId: session.user.id,
+          stageNumber: nextStage,
+          stageName: stages[nextStage - 1].name,
+        });
+      } catch (error) {
+        console.error("Unable to save stage progress:", error);
+      }
     }
   }
-
 if (authLoading || projectLoading) {
     return (
       <main className="auth-shell">
